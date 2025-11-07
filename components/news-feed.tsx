@@ -16,12 +16,11 @@ type Article = {
   description?: string
 }
 
-const fetcher = async (url: string) => {
+const fetcher = (url: string) => {
   console.log("[v0] Fetching:", url)
-  const res = await fetch(url)
-  const json = await res.json()
-  return json.articles ?? []  // 👈 ensures it's always an array
+  return fetch(url).then((r) => r.json())
 }
+
 function toUtcDateKey(d: Date) {
   const y = d.getUTCFullYear()
   const m = String(d.getUTCMonth() + 1).padStart(2, "0")
@@ -53,25 +52,28 @@ export default function NewsFeed() {
     }
   }, [data])
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, { display: string; items: Article[]; maxTs: number }>()
-    for (const item of data ?? []) {
-      const d = new Date(item.date)
-      if (Number.isNaN(d.getTime())) continue
-      const key = toUtcDateKey(d) // use UTC key
-      const entry = map.get(key) ?? {
-        display: displayUtcDate(d), // UTC display
-        items: [],
-        maxTs: 0,
-      }
-      entry.items.push(item)
-      entry.maxTs = Math.max(entry.maxTs, d.getTime())
-      map.set(key, entry)
+ const grouped = useMemo(() => {
+  const list = Array.isArray(data) ? data : [] // ✅ defensive check
+  const map = new Map<string, { display: string; items: Article[]; maxTs: number }>()
+
+  for (const item of list) {
+    const d = new Date(item.date)
+    if (Number.isNaN(d.getTime())) continue
+    const key = toUtcDateKey(d)
+    const entry = map.get(key) ?? {
+      display: displayUtcDate(d),
+      items: [],
+      maxTs: 0,
     }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1].maxTs - a[1].maxTs)
-      .map(([key, val]) => ({ key, ...val }))
-  }, [data])
+    entry.items.push(item)
+    entry.maxTs = Math.max(entry.maxTs, d.getTime())
+    map.set(key, entry)
+  }
+
+  return Array.from(map.entries())
+    .sort((a, b) => b[1].maxTs - a[1].maxTs)
+    .map(([key, val]) => ({ key, ...val }))
+}, [data])
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
