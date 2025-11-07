@@ -16,11 +16,12 @@ type Article = {
   description?: string
 }
 
-const fetcher = (url: string) => {
+const fetcher = async (url: string) => {
   console.log("[v0] Fetching:", url)
-  return fetch(url).then((r) => r.json())
+  const res = await fetch(url)
+  const json = await res.json()
+  return json.articles ?? []  // 👈 ensures it's always an array
 }
-
 function toUtcDateKey(d: Date) {
   const y = d.getUTCFullYear()
   const m = String(d.getUTCMonth() + 1).padStart(2, "0")
